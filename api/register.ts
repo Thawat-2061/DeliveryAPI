@@ -11,7 +11,7 @@ router.post('/user', async (req, res) => {
     let User = req.body;
 
     // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่
-    if (!User.username || !User.email || !User.password || !User.phone || !User.image || !User.address || !User.GPS_Latitude || !User.GPS_Longitude) {
+    if (!User.Username || !User.Email || !User.Password || !User.Phone || !User.Image || !User.Address || !User.GPS_Latitude || !User.GPS_Longitude) {
         return res.status(400).json({ error: "All fields are required." });
     }
 
