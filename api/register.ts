@@ -15,30 +15,44 @@ router.post('/user', async (req, res) => {
         return res.status(400).send({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
     }
 
+    // ตรวจสอบว่า latitude และ longitude เป็นตัวเลข
+    if (isNaN(latitude) || isNaN(longitude)) {
+        return res.status(400).send({ message: 'พิกัด GPS ไม่ถูกต้อง' });
+    }
+
     try {
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        // ตรวจสอบว่า latitude และ longitude เป็นตัวเลข
-        if (isNaN(latitude) || isNaN(longitude)) {
-            return res.status(400).send({ message: 'พิกัด GPS ไม่ถูกต้อง' });
-        }
-
-        const query = `
-            INSERT INTO users (Username, Email, Password, Phone, Image, Address, GPS_Latitude, GPS_Longitude)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-
-        conn.query(query, [username, email, hashedPassword, phone, image, address, latitude, longitude], (err, result) => {
+        // ตรวจสอบว่าชื่อผู้ใช้หรืออีเมลมีอยู่แล้วในฐานข้อมูลหรือไม่
+        const checkQuery = `SELECT * FROM users WHERE Username = ? OR Email = ?`;
+        conn.query(checkQuery, [username, email], (err, rows) => {
             if (err) {
-                return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้', error: err });
+                console.error('Error checking for existing user:', err);
+                return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล', error: err });
             }
-            res.status(201).send({ message: 'สมัครสมาชิกสำเร็จ' });
+            if (rows.length > 0) {
+                return res.status(409).send({ message: 'ชื่อผู้ใช้หรืออีเมลนี้มีอยู่แล้ว' });
+            }
+
+            // ถ้าไม่มีข้อมูลซ้ำ เพิ่มผู้ใช้ใหม่
+            const query = `
+                INSERT INTO users (Username, Email, Password, Phone, Image, Address, GPS_Latitude, GPS_Longitude)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+
+            conn.query(query, [username, email, hashedPassword, phone, image, address, latitude, longitude], (err, result) => {
+                if (err) {
+                    console.error('Database insertion error:', err);
+                    return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้', error: err });
+                }
+                res.status(201).send({ message: 'สมัครสมาชิกสำเร็จ' });
+            });
         });
     } catch (error) {
+        console.error('Registration error:', error);
         res.status(500).send({ message: 'เกิดข้อผิดพลาด', error });
     }
 });
-
 
 
 router.post('/rider', async (req, res) => {
