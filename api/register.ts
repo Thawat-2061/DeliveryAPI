@@ -40,7 +40,7 @@ router.post('/user', async (req, res) => {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
-            conn.query(query, [User.username, User.email, hashedPassword, User.phone, User.image, User.address, User.GPS_Latitude, User.GPS_Longitude], (err, result) => {
+            conn.query(query, [User.Username, User.Email, hashedPassword, User.Phone, User.Image, User.Address, User.GPS_Latitude, User.GPS_Longitude], (err, result) => {
                 if (err) {
                     console.error('Database insertion error:', err);
                     return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้', error: err });
