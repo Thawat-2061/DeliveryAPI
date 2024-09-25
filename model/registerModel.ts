@@ -1,10 +1,11 @@
 export interface RegisterPostRequest {
-    member_id:       number;
-    username: string;
-    email : string;
-    password: string;
-    conpassword : string;
-    newpassword : string;
-    wallet_balance : number;
-    type: string;
+    UserId:       number;
+    Username: string;
+    Email : string;
+    Password: string;
+    Phone: number;
+    Image: string;
+    Address:string;
+    GPS_Latitude: number;
+    GPS_Longitude:number;
 }

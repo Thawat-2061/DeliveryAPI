@@ -8,24 +8,25 @@ export const router = express.Router();
 const saltRounds = 10;
 
 router.post('/user', async (req, res) => {
-    const { username, email, password, phone, image, address, latitude, longitude } = req.body;
+    let User = req.body;
+    // const { username, email, password, phone, image, address, latitude, longitude } = req.body;
 
     // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่
-    if (!username || !email || !password || !phone || !address || !latitude || !longitude) {
-        return res.status(400).send({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
-    }
+    if (!User.username || !User.email || !User.password || !User.phone || !User.image || !User.address || !User.GPS_Latitude || !User.GPS_Longitude) {
+        return res.status(400).json({ error: "All fields are required." });
+      }
 
     // ตรวจสอบว่า latitude และ longitude เป็นตัวเลข
-    if (isNaN(latitude) || isNaN(longitude)) {
+    if (isNaN(User.GPS_Latitude) || isNaN(User.GPS_Longitude)) {
         return res.status(400).send({ message: 'พิกัด GPS ไม่ถูกต้อง' });
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const hashedPassword = await bcrypt.hash(User.password, saltRounds);
 
         // ตรวจสอบว่าชื่อผู้ใช้หรืออีเมลมีอยู่แล้วในฐานข้อมูลหรือไม่
         const checkQuery = `SELECT * FROM users WHERE Username = ? OR Email = ?`;
-        conn.query(checkQuery, [username, email], (err, rows) => {
+        conn.query(checkQuery, [User.username, User.email], (err, rows) => {
             if (err) {
                 console.error('Error checking for existing user:', err);
                 return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล', error: err });
@@ -40,7 +41,7 @@ router.post('/user', async (req, res) => {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `;
 
-            conn.query(query, [username, email, hashedPassword, phone, image, address, latitude, longitude], (err, result) => {
+            conn.query(query, [User.username, User.email, hashedPassword, User.phone, User.image, User.address, User.GPS_Latitude, User.GPS_Longitude], (err, result) => {
                 if (err) {
                     console.error('Database insertion error:', err);
                     return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้', error: err });
