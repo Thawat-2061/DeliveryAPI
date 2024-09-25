@@ -9,12 +9,11 @@ const saltRounds = 10;
 
 router.post('/user', async (req, res) => {
     let User = req.body;
-    // const { username, email, password, phone, image, address, latitude, longitude } = req.body;
 
     // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่
     if (!User.username || !User.email || !User.password || !User.phone || !User.image || !User.address || !User.GPS_Latitude || !User.GPS_Longitude) {
         return res.status(400).json({ error: "All fields are required." });
-      }
+    }
 
     // ตรวจสอบว่า latitude และ longitude เป็นตัวเลข
     if (isNaN(User.GPS_Latitude) || isNaN(User.GPS_Longitude)) {
@@ -46,7 +45,8 @@ router.post('/user', async (req, res) => {
                     console.error('Database insertion error:', err);
                     return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้', error: err });
                 }
-                res.status(201).send({ message: 'สมัครสมาชิกสำเร็จ' });
+                // การเพิ่มผู้ใช้สำเร็จ
+                res.status(201).send({ message: 'สมัครสมาชิกสำเร็จ', userId: result.insertId }); // ส่ง UserId ที่ถูกสร้าง
             });
         });
     } catch (error) {
