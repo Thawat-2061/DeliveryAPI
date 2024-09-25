@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import { router as register } from "./api/register";
+import { router as login } from "./api/login";
 
 export const app = express();
 
@@ -10,7 +11,7 @@ app.use(bodyParser.text());
 app.use(bodyParser.json());
 
 // Register your routes first
-
+app.use("/login", login);
 app.use("/register", register);
 
 
