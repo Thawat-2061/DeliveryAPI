@@ -21,11 +21,11 @@ router.post('/user', async (req, res) => {
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(User.password, saltRounds);
+        const hashedPassword = await bcrypt.hash(User.Password, saltRounds);
 
         // ตรวจสอบว่าชื่อผู้ใช้หรืออีเมลมีอยู่แล้วในฐานข้อมูลหรือไม่
         const checkQuery = `SELECT * FROM users WHERE Username = ? OR Email = ?`;
-        conn.query(checkQuery, [User.username, User.email], (err, rows) => {
+        conn.query(checkQuery, [User.Username, User.Email], (err, rows) => {
             if (err) {
                 console.error('Error checking for existing user:', err);
                 return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล', error: err });
