@@ -87,3 +87,40 @@ router.post('/rider', async (req, res) => {
     }
 });
 
+router.delete('/userDE', (req, res) => {
+    const {userId} = req.body;
+
+    const deleteUserQuery = 'DELETE FROM users WHERE UserID = ?';
+
+    conn.query(deleteUserQuery, [userId], (err, result) => {
+        if (err) {
+            console.error('Error deleting user:', err);
+            return res.status(500).json({ message: 'Failed to delete user' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.status(200).json({ message: 'User deleted successfully' });
+    });
+});
+
+router.delete('/riderDE', (req, res) => {
+    const {riderId} = req.body;
+
+    const deleteUserQuery = 'DELETE FROM riders WHERE RiderID = ?';
+
+    conn.query(deleteUserQuery, [riderId], (err, result) => {
+        if (err) {
+            console.error('Error deleting rider:', err);
+            return res.status(500).json({ message: 'Failed to delete rider' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Rider not found' });
+        }
+
+        res.status(200).json({ message: 'Rider deleted successfully' });
+    });
+});
