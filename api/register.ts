@@ -57,16 +57,17 @@ router.post('/user', async (req, res) => {
 
 
 router.post('/rider', async (req, res) => {
-    const { username, email, password, phone, image, vehicleRegistration } = req.body;
+    let Rider = req.body;
+    // const { username, email, password, phone, image, vehicleRegistration } = req.body;
 
     // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่
-    if (!username || !email || !password || !phone || !vehicleRegistration) {
+    if (!Rider.Username || !Rider.Email || !Rider.Password || !Rider.Phone || !Rider.VehicleRegistration) {
         return res.status(400).send({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
     }
 
     try {
         // ทำการ hash รหัสผ่านก่อนบันทึกลงในฐานข้อมูล
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const hashedPassword = await bcrypt.hash(Rider.Password, saltRounds);
 
         // สร้าง query เพื่อเพิ่มข้อมูล Rider ลงในตาราง riders
         const query = `
@@ -75,7 +76,7 @@ router.post('/rider', async (req, res) => {
         `;
 
         // ใช้การเชื่อมต่อฐานข้อมูล MySQL เพื่อบันทึกข้อมูล
-        conn.query(query, [username, email, hashedPassword, phone, image, vehicleRegistration], (err, result) => {
+        conn.query(query, [Rider.Username, Rider.Email, hashedPassword, Rider.Phone, Rider.Image, Rider.VehicleRegistration], (err, result) => {
             if (err) {
                 return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล Rider', error: err });
             }
