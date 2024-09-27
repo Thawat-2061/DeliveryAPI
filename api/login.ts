@@ -9,7 +9,7 @@ router.post("/user", (req, res) => {
     // const input = req.params.input; // พารามิเตอร์ input จะเป็นได้ทั้ง email หรือ username
     const {input } = req.body; 
     // ปรับ SQL ให้รองรับทั้ง email และ username
-    let sql = "SELECT UserId ,Username ,Email ,Phone ,Image ,Address ,GPS_Latitude ,GPS_Longitude FROM users WHERE email = ? OR username = ?";
+    let sql = "SELECT * FROM users WHERE email = ? OR username = ?";
   
     conn.query(sql, [input, input], (err, result) => {
       if (err) {
@@ -24,7 +24,7 @@ router.post("/user", (req, res) => {
     // const input = req.params.input; // พารามิเตอร์ input จะเป็นได้ทั้ง email หรือ username
     const {input } = req.body; 
     // ปรับ SQL ให้รองรับทั้ง email และ username
-    let sql = "SELECT RiderId, Username, Email, Phone, Image, VehicleRegistration FROM riders WHERE email = ? OR username = ?";
+    let sql = "SELECT * FROM riders WHERE email = ? OR username = ?";
   
     conn.query(sql, [input, input], (err, result) => {
       if (err) {
