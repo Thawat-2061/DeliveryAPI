@@ -3,6 +3,7 @@ import bodyParser from "body-parser";
 import { router as register } from "./api/register";
 import { router as login } from "./api/login";
 import { router as profile } from "./api/profile";
+import { router as user } from "./api/user";
 
 export const app = express();
 
@@ -15,6 +16,7 @@ app.use(bodyParser.json());
 app.use("/login", login);
 app.use("/register", register);
 app.use("/profile", profile);
+app.use("/user", user);
 
 
 
