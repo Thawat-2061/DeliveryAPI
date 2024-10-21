@@ -2,6 +2,7 @@ import express from "express";
 import multer from "multer";
 import { Request, Response } from "express"; // Import Express types
 import mysql from "mysql";
+import bcrypt from 'bcryptjs';
 
 // Firebase
 import { initializeApp } from "firebase/app";
@@ -57,7 +58,7 @@ router.post("/", fileupload.diskLoader.single("file"), async (req, res) => {
 
 //-------------------------------------------------------------------------------------------------
 
-const bcrypt = require('bcrypt');
+
 const saltRounds = 10;
 
 router.post("/update", async (req, res) => {
