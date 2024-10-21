@@ -24,8 +24,8 @@ router.post('/user', async (req, res) => {
         const hashedPassword = await bcrypt.hash(User.Password, saltRounds);
 
         // ตรวจสอบว่าชื่อผู้ใช้หรืออีเมลมีอยู่แล้วในฐานข้อมูลหรือไม่
-        const checkQuery = `SELECT * FROM users WHERE Username = ? OR Email = ?`;
-        conn.query(checkQuery, [User.Username, User.Email], (err, rows) => {
+        const checkQuery = `SELECT * FROM users WHERE Username = ? OR Email = ? OR Phone = ?`;
+        conn.query(checkQuery, [User.Username, User.Email,User.Phone], (err, rows) => {
             if (err) {
                 console.error('Error checking for existing user:', err);
                 return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล', error: err });
@@ -68,6 +68,15 @@ router.post('/rider', async (req, res) => {
     try {
         // ทำการ hash รหัสผ่านก่อนบันทึกลงในฐานข้อมูล
         const hashedPassword = await bcrypt.hash(Rider.Password, saltRounds);
+        const checkQuery = `SELECT * FROM riders WHERE Username = ? OR Email = ? OR Phone = ? OR VehicleRegistration = ?`;
+        conn.query(checkQuery, [Rider.Username, Rider.Email,Rider.Phone,Rider.VehicleRegistration], (err, rows) => {
+            if (err) {
+                console.error('Error checking for existing user:', err);
+                return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล', error: err });
+            }
+            if (rows.length > 0) {
+                return res.status(409).send({ message: 'ชื่อผู้ใช้หรืออีเมลนี้มีอยู่แล้ว' });
+            }
 
         // สร้าง query เพื่อเพิ่มข้อมูล Rider ลงในตาราง riders
         const query = `
@@ -82,6 +91,7 @@ router.post('/rider', async (req, res) => {
             }
             res.status(201).send({ message: 'สมัคร Rider สำเร็จ' });
         });
+    });
     } catch (error) {
         res.status(500).send({ message: 'เกิดข้อผิดพลาด', error });
     }

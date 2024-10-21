@@ -4,6 +4,7 @@ import { router as register } from "./api/register";
 import { router as login } from "./api/login";
 import { router as profile } from "./api/profile";
 import { router as user } from "./api/user";
+import { router as upload } from "./api/upload";
 
 export const app = express();
 
@@ -17,6 +18,7 @@ app.use("/login", login);
 app.use("/register", register);
 app.use("/profile", profile);
 app.use("/user", user);
+app.use("/upload", upload);
 
 
 
