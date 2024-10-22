@@ -89,7 +89,7 @@ router.get("/rider", (req, res) => {
   const sql = `
     SELECT * FROM deliveryorders 
     WHERE RiderID IS NULL 
-    AND status = 'รอไรเดอร์'
+    AND Status = 'รอไรเดอร์'
   `;
 
   // เรียกใช้การ query ไปที่ฐานข้อมูล
