@@ -4,19 +4,20 @@ import { conn } from '../dbconn'; // ตรวจสอบให้แน่ใ�
 import bcrypt from 'bcryptjs';
 
 export const router = express.Router();
-router.post("/user", (req, res) => {
-    const { UserID } = req.body;
+router.get("/user/:SenderID", (req, res) => {
+  const SenderID = req.params.SenderID; 
+  
   
     // ตรวจสอบว่ามีการส่ง UserID มาหรือไม่
-    if (!UserID) {
-      return res.status(400).json({ error: "UserID is required" });
+    if (!SenderID) {
+      return res.status(400).json({ error: "SenderID is required" });
     }
   
     // SQL query สำหรับค้นหาจาก UserID
     const sql = "SELECT * FROM users WHERE UserID = ?";
   
     // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่ง UserID ไปใน array แทน
-    conn.query(sql, [UserID], (err, result) => {
+    conn.query(sql, [SenderID], (err, result) => {
       if (err) {
         // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
         return res.status(500).json({ error: err.message });
