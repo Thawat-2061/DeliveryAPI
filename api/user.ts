@@ -83,3 +83,28 @@ router.get("/showMe/:UserID", (req, res) => {
     res.json(result);
   });
 });
+
+router.get("/rider", (req, res) => {
+  // const userId = req.params.UserID; // รับค่า UserID จาก URL parameter
+
+  // SQL query เพื่อค้นหาข้อมูลจากตาราง deliveryorders พร้อมกับข้อมูลจาก users โดยใช้ JOIN
+  const sql = `
+    SELECT * FROM deliveryorders WHERE RiderID is NULL and status = 'รอไรเดอร์'
+  `;
+  
+  // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่ง UserID ไปใน array แทน
+  conn.query(sql, (err, result) => {
+    if (err) {
+      // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
+      return res.status(500).json({ error: err.message });
+    }
+  
+    // ตรวจสอบว่าพบข้อมูลหรือไม่
+    if (result.length === 0) {
+      return res.status(404).json({ message: "No data found" });
+    }
+  
+    // ส่งข้อมูลที่พบกลับไปให้ผู้เรียก API
+    res.json(result);
+  });
+});
