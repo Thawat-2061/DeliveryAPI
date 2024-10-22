@@ -33,7 +33,7 @@ router.get("/show/:SenderID", (req, res) => {
 
   // SQL query เพื่อค้นหาข้อมูลจากตาราง deliveryorders พร้อมกับข้อมูลจาก users โดยใช้ JOIN
   const sql = `
-    SELECT d.*, u.Username AS CustomerName, u.Phone
+    SELECT d.*, u.Username AS CustomerName, u.Phone , u.GPS_Latitude AS CustomerLat, u.GPS_Longitude AS CustomerLong
     FROM deliveryorders d
     JOIN users u ON d.ReceiverID = u.UserID
     WHERE d.SenderID = ?
