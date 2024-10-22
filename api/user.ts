@@ -84,12 +84,14 @@ router.get("/showMe/:UserID", (req, res) => {
   });
 });
 
-router.get("/rider", (req, res) => {
+router.get("/showrider", (req, res) => {
   // SQL query เพื่อค้นหาข้อมูลจากตาราง deliveryorders
   const sql = `
-    SELECT * FROM deliveryorders 
-    WHERE Status = 'รอไรเดอร์'
-  `;
+  SELECT * FROM deliveryorders 
+WHERE RiderID IS NULL 
+AND Status = 'รอไรเดอร์'
+
+`;
 
   // เรียกใช้การ query ไปที่ฐานข้อมูล
   conn.query(sql, (err, result) => {
