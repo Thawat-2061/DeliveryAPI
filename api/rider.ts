@@ -8,11 +8,13 @@ export const router = express.Router();
 router.get("/", (req, res) => {
     // SQL query เพื่อค้นหาข้อมูลจากตาราง deliveryorders
     const sql = `
-    SELECT * FROM deliveryorders 
-  WHERE RiderID IS NULL 
-  AND Status = 'รอไรเดอร์'
-  
+    SELECT d.*, u.Phone AS SenderPhone, u.Name AS SenderName 
+    FROM deliveryorders d
+    JOIN users u ON d.SenderID = u.UserID
+    WHERE d.RiderID IS NULL 
+    AND d.Status = 'รอไรเดอร์'
   `;
+  
   
     // เรียกใช้การ query ไปที่ฐานข้อมูล
     conn.query(sql, (err, result) => {
