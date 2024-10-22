@@ -6,6 +6,7 @@ import { router as profile } from "./api/profile";
 import { router as user } from "./api/user";
 import { router as upload } from "./api/upload";
 import { router as order } from "./api/order";
+import { router as rider } from "./api/rider";
 
 
 export const app = express();
@@ -22,6 +23,7 @@ app.use("/profile", profile);
 app.use("/user", user);
 app.use("/upload", upload);
 app.use("/order", order);
+app.use("/rider", rider);
 
 
 
