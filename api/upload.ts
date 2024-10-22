@@ -56,6 +56,18 @@ router.post("/", fileupload.diskLoader.single("file"), async (req, res) => {
     });
 });
 
+router.post("/order", fileupload.diskLoader.single("file"), async (req, res) => {
+  const filename = Math.round(Math.random() * 100000) + '.png';
+  const storageRef = ref(storage, "/order/" + filename);
+  const metadata = { contentType: req.file!.mimetype };
+  const snapshot = await uploadBytesResumable(storageRef, req.file!.buffer, metadata);
+  const url = await getDownloadURL(snapshot.ref);
+  res.status(200).json({
+      filename: filename,
+      url :url
+  });
+});
+
 //-------------------------------------------------------------------------------------------------
 
 
