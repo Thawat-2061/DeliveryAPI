@@ -61,3 +61,31 @@ router.get("/user/:SenderID", (req, res) => {
     });
   });
   
+  router.put("/editUser", (req, res) => {
+    const { UserID, Username, Phone, Email, Address } = req.body;
+  
+    // ตรวจสอบว่ามีการส่ง UserID มาหรือไม่
+    if (!UserID) {
+      return res.status(400).json({ error: "UserID is required" });
+    }
+  
+    // SQL query สำหรับอัปเดตข้อมูลผู้ใช้
+    const sql = "UPDATE users SET Username = ?, Phone = ?, Email = ?, Address = ? WHERE UserID = ?";
+  
+    // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่งข้อมูลที่จะอัปเดตไปใน array
+    conn.query(sql, [Username, Phone, Email, Address, UserID], (err, result) => {
+      if (err) {
+        // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
+        return res.status(500).json({ error: err.message });
+      }
+  
+      // ตรวจสอบว่ามีแถวที่ถูกอัปเดตหรือไม่
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "No user found with the provided UserID" });
+      }
+  
+      // ส่งข้อความยืนยันการอัปเดตสำเร็จ
+      res.json({ message: "User updated successfully" });
+    });
+  });
+  

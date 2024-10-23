@@ -8,9 +8,10 @@ export const router = express.Router();
 router.get("/", (req, res) => {
     // SQL query เพื่อค้นหาข้อมูลจากตาราง deliveryorders
     const sql = `
-    SELECT d.*, u.Phone AS SenderPhone, u.Username AS SenderName 
+    SELECT d.*, s.Phone AS SenderPhone, s.Username AS SenderName , r.Phone AS CustomerPhone, r.Username AS CustomerName, s.Image AS SenderImage, r.Image AS CustomerImage, s.GPS_Latitude AS SenderLAt, s.GPS_Longitude AS SenderLong, r.GPS_Latitude AS CustomerLAt, r.GPS_Longitude AS CustomerLong
     FROM deliveryorders d
-    JOIN users u ON d.SenderID = u.UserID
+    JOIN users s ON d.SenderID = u.UserID
+    JOIN users r ON d.ReceiverID = u.UserID
     WHERE d.RiderID IS NULL 
     AND d.Status = 'รอไรเดอร์'
   `;
