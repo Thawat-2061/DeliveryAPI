@@ -98,33 +98,41 @@ router.get("/showMe/:UserID", (req, res) => {
 
 const saltRounds = 10;
 
-router.put("/passUser", async(req, res) => {
-  const { UserID, Password, } = req.body;
-  const hashedPassword = await bcrypt.hash(Password, saltRounds);
+router.put("/passUser", async (req, res) => {
+  const { UserID, Password } = req.body;
 
+  try {
+    // ตรวจสอบว่ามีการส่ง UserID มาหรือไม่
+    if (!UserID || !Password) {
+      return res.status(400).json({ error: "UserID and Password are required" });
+    }
 
-  // ตรวจสอบว่ามีการส่ง UserID มาหรือไม่
-  if (!UserID) {
-    return res.status(400).json({ error: "UserID is required" });
+    // แฮชรหัสผ่านก่อนที่จะอัปเดต
+    const hashedPassword = await bcrypt.hash(Password, saltRounds);
+
+    // SQL query สำหรับอัปเดตข้อมูลผู้ใช้
+    const sql = "UPDATE users SET Password = ? WHERE UserID = ?";
+
+    // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่งข้อมูลที่จะอัปเดตไปใน array
+    conn.query(sql, [hashedPassword, UserID], (err, result) => {
+      if (err) {
+        // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
+        return res.status(500).json({ error: (err as Error).message });
+      }
+
+      // ตรวจสอบว่ามีแถวที่ถูกอัปเดตหรือไม่
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "No user found with the provided UserID" });
+      }
+
+      // ส่งข้อความยืนยันการอัปเดตสำเร็จ
+      res.json({ message: "Password updated successfully" });
+    });
+  } catch (err) {
+    // จัดการข้อผิดพลาดในขั้นตอนการแฮช
+    res.status(500).json({ error: (err as Error).message });
   }
-
-  // SQL query สำหรับอัปเดตข้อมูลผู้ใช้
-  const sql = "UPDATE users SET Password = ? WHERE UserID = ?";
-
-  // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่งข้อมูลที่จะอัปเดตไปใน array
-  conn.query(sql, [hashedPassword, UserID], (err, result) => {
-    if (err) {
-      // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
-      return res.status(500).json({ error: err.message });
-    }
-
-    // ตรวจสอบว่ามีแถวที่ถูกอัปเดตหรือไม่
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "No user found with the provided UserID" });
-    }
-
-    // ส่งข้อความยืนยันการอัปเดตสำเร็จ
-    res.json({ message: "User updated successfully" });
-  });
 });
+
+
 
