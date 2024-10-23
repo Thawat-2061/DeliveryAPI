@@ -73,9 +73,11 @@ router.get("/showMe/:UserID", (req, res) => {
 
   // SQL query เพื่อค้นหาข้อมูลจากตาราง deliveryorders พร้อมกับข้อมูลจาก users โดยใช้ JOIN
   const sql = `
-    SELECT d.*, u.Username AS SenderName, u.Phone , u.GPS_Latitude AS SenderLat, u.GPS_Longitude AS SenderLong
+    SELECT d.*, u.Username AS SenderName, u.Phone , u.GPS_Latitude AS SenderLat, u.GPS_Longitude AS SenderLong, u.Image AS SenderImage, r.Image AS ReceiverImage
     FROM deliveryorders d
     JOIN users u ON d.SenderID = u.UserID
+    JOIN users r ON d.ReceiverID = r.UserID
+
     WHERE d.ReceiverID = ?
   `;
   
