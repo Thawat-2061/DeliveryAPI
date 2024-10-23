@@ -7,7 +7,7 @@ export const router = express.Router();
 
 
 router.put("/update", async (req, res) => {
-    const { OrderID, Status } = req.body;
+    const { OrderID,RiderID ,Status } = req.body;
   
     try {
       // ตรวจสอบว่ามีการส่ง UserID มาหรือไม่
@@ -19,10 +19,10 @@ router.put("/update", async (req, res) => {
     //   const hashedPassword = await bcrypt.hash(Password, saltRounds);
   
       // SQL query สำหรับอัปเดตข้อมูลผู้ใช้
-      const sql = "UPDATE deliveryorders SET Status = ? WHERE OrderID = ?";
+      const sql = "UPDATE deliveryorders SET Status = ?, RiderID = WHERE OrderID = ?";
   
       // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่งข้อมูลที่จะอัปเดตไปใน array
-      conn.query(sql, [ Status ,OrderID], (err, result) => {
+      conn.query(sql, [ Status ,RiderID,OrderID], (err, result) => {
         if (err) {
           // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
           return res.status(500).json({ error: (err as Error).message });
