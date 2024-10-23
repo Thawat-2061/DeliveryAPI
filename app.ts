@@ -7,6 +7,8 @@ import { router as user } from "./api/user";
 import { router as upload } from "./api/upload";
 import { router as order } from "./api/order";
 import { router as rider } from "./api/rider";
+import { router as status } from "./api/status";
+
 
 
 export const app = express();
@@ -24,6 +26,8 @@ app.use("/user", user);
 app.use("/upload", upload);
 app.use("/order", order);
 app.use("/rider", rider);
+app.use("/status", status);
+
 
 
 
