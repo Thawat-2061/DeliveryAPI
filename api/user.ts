@@ -35,9 +35,11 @@ router.get("/show/:SenderID", (req, res) => {
   const sql = `
   SELECT d.*, 
          u.Username AS CustomerName, 
-         u.Phone, 
+         u.Phone AS CustomerPhone, 
          u.GPS_Latitude AS CustomerLat, 
          u.GPS_Longitude AS CustomerLong,
+         sender.Username AS SenderName,
+         sender.Phone AS SenderPhone,
          sender.GPS_Latitude AS SenderLat, 
          sender.GPS_Longitude AS SenderLong
   FROM deliveryorders d
