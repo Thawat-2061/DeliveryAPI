@@ -38,6 +38,8 @@ router.get("/show/:SenderID", (req, res) => {
          u.Phone AS CustomerPhone, 
          u.GPS_Latitude AS CustomerLat, 
          u.GPS_Longitude AS CustomerLong,
+         u.Image AS CustomerImage,
+         sender.Image AS SenderImage,
          sender.Username AS SenderName,
          sender.Phone AS SenderPhone,
          sender.GPS_Latitude AS SenderLat, 
