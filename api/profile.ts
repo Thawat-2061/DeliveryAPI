@@ -89,7 +89,7 @@ router.get("/user/:SenderID", (req, res) => {
     });
   });
   router.put("/editRider", (req, res) => {
-    const { RiderID, Username, Phone, Email, Address } = req.body;
+    const { RiderID, Username, Phone, Email } = req.body;
   
     // ตรวจสอบว่ามีการส่ง UserID มาหรือไม่
     if (!RiderID) {
@@ -97,10 +97,10 @@ router.get("/user/:SenderID", (req, res) => {
     }
   
     // SQL query สำหรับอัปเดตข้อมูลผู้ใช้
-    const sql = "UPDATE riders SET Username = ?, Phone = ?, Email = ?, Address = ? WHERE RiderID = ?";
+    const sql = "UPDATE riders SET Username = ?, Phone = ?, Email = ? WHERE RiderID = ?";
   
     // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่งข้อมูลที่จะอัปเดตไปใน array
-    conn.query(sql, [Username, Phone, Email, Address, RiderID], (err, result) => {
+    conn.query(sql, [Username, Phone, Email, RiderID], (err, result) => {
       if (err) {
         // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
         return res.status(500).json({ error: err.message });
