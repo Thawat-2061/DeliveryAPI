@@ -13,11 +13,11 @@ router.post("/user", (req, res) => {
     return res.status(400).json({ error: "Input is required" });
   }
 
-  // SQL query สำหรับค้นหาจาก email หรือ username
+  // SQL query สำหรับค้นหาจาก email, username หรือ phone
   const sql = "SELECT * FROM users WHERE Email = ? OR Username = ? OR Phone = ?";
 
   // เรียกใช้การ query ไปที่ฐานข้อมูล
-  conn.query(sql, [input, input], (err, result) => {
+  conn.query(sql, [input, input, input], (err, result) => {
     if (err) {
       // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
       return res.status(500).json({ error: err.message });
@@ -34,6 +34,7 @@ router.post("/user", (req, res) => {
 });
 
 
+
   router.post("/rider", (req, res) => {
     const { input } = req.body;
   
@@ -46,7 +47,7 @@ router.post("/user", (req, res) => {
     const sql = "SELECT * FROM riders WHERE Email = ? OR Username = ? OR Phone = ?";
   
     // เรียกใช้การ query ไปที่ฐานข้อมูล
-    conn.query(sql, [input, input], (err, result) => {
+    conn.query(sql, [input, input , input], (err, result) => {
       if (err) {
         // ส่งสถานะ error 500 หากมีข้อผิดพลาดในการ query
         return res.status(500).json({ error: err.message });
