@@ -19,7 +19,12 @@ router.put("/update", async (req, res) => {
     //   const hashedPassword = await bcrypt.hash(Password, saltRounds);
   
       // SQL query สำหรับอัปเดตข้อมูลผู้ใช้
-      const sql = "UPDATE deliveryorders SET Status = ?, RiderID = ? WHERE OrderID = ?";
+      const sql = `
+  UPDATE deliveryorders 
+  SET Status = ?, RiderID = ? 
+  WHERE OrderID = ? AND RiderID IS NULL
+`;
+
   
       // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่งข้อมูลที่จะอัปเดตไปใน array
       conn.query(sql, [ Status ,RiderID,OrderID], (err, result) => {
