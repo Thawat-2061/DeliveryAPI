@@ -104,6 +104,25 @@ router.post("/update", async (req, res) => {
       res.status(200).json({ affected_rows: result.affectedRows });
     });
   });
+  router.post("/updateRider", async (req, res) => {
+    // รับข้อมูลจาก body
+    const { RiderID, Image } = req.body;
+   
+  
+    // SQL คำสั่งอัปเดตข้อมูล
+    let sql = "UPDATE `riders` SET `Image` = ? WHERE `RiderID` = ?";
+    sql = mysql.format(sql, [Image, RiderID]);
+  
+    // เรียกใช้คำสั่ง SQL
+    conn.query(sql, (err, result) => {
+      if (err) {
+        console.error("Error updating data:", err);
+        return res.status(500).json({ error: "Failed to update data" });
+      }
+      // ส่งผลลัพธ์กลับไปยังผู้ใช้
+      res.status(200).json({ affected_rows: result.affectedRows });
+    });
+  });
 
   router.post("/imageUP", async (req, res) => {
     // รับข้อมูลจาก body
