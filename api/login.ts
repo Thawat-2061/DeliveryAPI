@@ -14,7 +14,7 @@ router.post("/user", (req, res) => {
   }
 
   // SQL query สำหรับค้นหาจาก email หรือ username
-  const sql = "SELECT * FROM users WHERE Email = ? OR Username = ?";
+  const sql = "SELECT * FROM users WHERE Email = ? OR Username = ? OR Phone";
 
   // เรียกใช้การ query ไปที่ฐานข้อมูล
   conn.query(sql, [input, input], (err, result) => {
