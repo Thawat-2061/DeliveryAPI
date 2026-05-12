@@ -4,10 +4,10 @@ export const conn = mysql.createPool({
 
 
   connectionLimit: 10,
-  host: "202.28.34.197",
-  user: "web66_65011212061",
-  password: "65011212061@csmsu",
-  database: "web66_65011212061",
+  host: "localhost",
+  user: "kan",
+  password: "kas333",
+  database: "deliverydb",
 
   // connectionLimit: 10,
   // host: "sql12.freemysqlhosting.net",

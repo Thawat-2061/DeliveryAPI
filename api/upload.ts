@@ -1,146 +1,90 @@
 import express from "express";
 import multer from "multer";
-import { Request, Response } from "express"; // Import Express types
+import path from "path";
+import fs from "fs";
 import mysql from "mysql";
-import bcrypt from 'bcryptjs';
-
-// Firebase
-import { initializeApp } from "firebase/app";
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-
-// MySQL
-import { conn } from "../dbconn"; // Import connection from your dbconn
+import { conn } from "../dbconn";
 import { UploadPostRequest } from "../model/UploadModel";
-
-// Firebase Config
-const firebaseConfig = {
-  apiKey: "AIzaSyC0VTfNMh9G9KbOj7QAosHKSqtRbDDj1mg",
-  authDomain: "delivery-67f06.firebaseapp.com",
-  projectId: "delivery-67f06",
-  storageBucket: "delivery-67f06.appspot.com",
-  messagingSenderId: "20496632069",
-  appId: "1:20496632069:android:6984f9bda2f114f5d1cf6c",
-};
-
-
 
 export const router = express.Router();
 
+const makeDir = (dir: string) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+};
+makeDir("uploads/images");
+makeDir("uploads/order");
+makeDir("uploads/statusOrder");
 
-initializeApp(firebaseConfig);
-const storage = getStorage();
-
-
-class FileMiddleware {
-    filename = "";
-    public readonly diskLoader = multer({
-        storage: multer.memoryStorage(),
-        limits: {
-            fileSize: 67108864 
-        }
-    });
-}
-const fileupload = new FileMiddleware();
-
-
-//add
-router.post("/", fileupload.diskLoader.single("file"), async (req, res) => {
-    const filename = Math.round(Math.random() * 100000) + '.png';
-    const storageRef = ref(storage, "/images/" + filename);
-    const metadata = { contentType: req.file!.mimetype };
-    const snapshot = await uploadBytesResumable(storageRef, req.file!.buffer, metadata);
-    const url = await getDownloadURL(snapshot.ref);
-    res.status(200).json({
-        filename: filename,
-        url :url
-    });
-});
-
-router.post("/order", fileupload.diskLoader.single("file"), async (req, res) => {
-  const filename = Math.round(Math.random() * 100000) + '.png';
-  const storageRef = ref(storage, "/order/" + filename);
-  const metadata = { contentType: req.file!.mimetype };
-  const snapshot = await uploadBytesResumable(storageRef, req.file!.buffer, metadata);
-  const url = await getDownloadURL(snapshot.ref);
-  res.status(200).json({
-      filename: filename,
-      url :url
+const makeStorage = (folder: string) =>
+  multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, `uploads/${folder}`),
+    filename: (_req, file, cb) => {
+      const unique = Math.round(Math.random() * 100000);
+      cb(null, unique + path.extname(file.originalname || ".png"));
+    },
   });
+
+const uploaders = {
+  images: multer({ storage: makeStorage("images"), limits: { fileSize: 67108864 } }),
+  order: multer({ storage: makeStorage("order"),  limits: { fileSize: 67108864 } }),
+  statusOrder: multer({ storage: makeStorage("statusOrder"), limits: { fileSize: 67108864 } }),
+};
+
+
+// POST /upload/
+router.post("/", uploaders.images.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  const url = `uploads/images/${req.file.filename}`;
+  res.status(200).json({ filename: req.file.filename, url });
 });
 
-router.post("/upstatus", fileupload.diskLoader.single("file"), async (req, res) => {
-  const filename = Math.round(Math.random() * 100000) + '.png';
-  const storageRef = ref(storage, "/statusOrder/" + filename);
-  const metadata = { contentType: req.file!.mimetype };
-  const snapshot = await uploadBytesResumable(storageRef, req.file!.buffer, metadata);
-  const url = await getDownloadURL(snapshot.ref);
-  res.status(200).json({
-      filename: filename,
-      url :url
-  });
+// POST /upload/order
+router.post("/order", uploaders.order.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  const url = `uploads/order/${req.file.filename}`;
+  res.status(200).json({ filename: req.file.filename, url });
 });
 
+// POST /upload/upstatus
+router.post("/upstatus", uploaders.statusOrder.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  const url = `uploads/statusOrder/${req.file.filename}`;
+  res.status(200).json({ filename: req.file.filename, url });
+});
 
-//-------------------------------------------------------------------------------------------------
-
-
-const saltRounds = 10;
 
 router.post("/update", async (req, res) => {
-    // รับข้อมูลจาก body
-    let add: UploadPostRequest = req.body;
-  
-    // SQL คำสั่งอัปเดตข้อมูล
-    let sql = "UPDATE `users` SET `Image` = ? WHERE `UserID` = ?";
-    sql = mysql.format(sql, [add.Image, add.UserID]);
-  
-    // เรียกใช้คำสั่ง SQL
-    conn.query(sql, (err, result) => {
-      if (err) {
-        console.error("Error updating data:", err);
-        return res.status(500).json({ error: "Failed to update data" });
-      }
-      // ส่งผลลัพธ์กลับไปยังผู้ใช้
-      res.status(200).json({ affected_rows: result.affectedRows });
-    });
+  let add: UploadPostRequest = req.body;
+  let sql = mysql.format(
+    "UPDATE `users` SET `Image` = ? WHERE `UserID` = ?",
+    [add.Image, add.UserID]
+  );
+  conn.query(sql, (err, result) => {
+    if (err) return res.status(500).json({ error: "Failed to update data" });
+    res.status(200).json({ affected_rows: result.affectedRows });
   });
-  router.post("/updateRider", async (req, res) => {
-    // รับข้อมูลจาก body
-    const { RiderID, Image } = req.body;
-   
-  
-    // SQL คำสั่งอัปเดตข้อมูล
-    let sql = "UPDATE `riders` SET `Image` = ? WHERE `RiderID` = ?";
-    sql = mysql.format(sql, [Image, RiderID]);
-  
-    // เรียกใช้คำสั่ง SQL
-    conn.query(sql, (err, result) => {
-      if (err) {
-        console.error("Error updating data:", err);
-        return res.status(500).json({ error: "Failed to update data" });
-      }
-      // ส่งผลลัพธ์กลับไปยังผู้ใช้
-      res.status(200).json({ affected_rows: result.affectedRows });
-    });
+});
+
+router.post("/updateRider", async (req, res) => {
+  const { RiderID, Image } = req.body;
+  let sql = mysql.format(
+    "UPDATE `riders` SET `Image` = ? WHERE `RiderID` = ?",
+    [Image, RiderID]
+  );
+  conn.query(sql, (err, result) => {
+    if (err) return res.status(500).json({ error: "Failed to update data" });
+    res.status(200).json({ affected_rows: result.affectedRows });
   });
+});
 
-  router.post("/imageUP", async (req, res) => {
-    // รับข้อมูลจาก body
-    const { OrderID,Image ,Status } = req.body;
-  
-    // SQL คำสั่งอัปเดตข้อมูล
-    let sql = "UPDATE `deliveryorders` SET `Image` = ? ,`Status` = ?  WHERE `OrderID` = ?";
-    sql = mysql.format(sql, [Image ,Status, OrderID]);
-  
-    // เรียกใช้คำสั่ง SQL
-    conn.query(sql, (err, result) => {
-      if (err) {
-        console.error("Error updating data:", err);
-        return res.status(500).json({ error: "Failed to update data" });
-      }
-      // ส่งผลลัพธ์กลับไปยังผู้ใช้
-      res.status(200).json({ affected_rows: result.affectedRows });
-    });
+router.post("/imageUP", async (req, res) => {
+  const { OrderID, Image, Status } = req.body;
+  let sql = mysql.format(
+    "UPDATE `deliveryorders` SET `Image` = ?, `Status` = ? WHERE `OrderID` = ?",
+    [Image, Status, OrderID]
+  );
+  conn.query(sql, (err, result) => {
+    if (err) return res.status(500).json({ error: "Failed to update data" });
+    res.status(200).json({ affected_rows: result.affectedRows });
   });
-
-
+});

@@ -6,32 +6,92 @@ import bcrypt from 'bcryptjs';
 export const router = express.Router();
 
 router.post("/", (req, res) => {
-    const { SenderID, ReceiverID	, Name , Detail, Status, Image} = req.body; // รับข้อมูลจาก body
-  
-    // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่
-    if (!SenderID || !Name	 || !Detail || !Status|| !ReceiverID|| !Image) {
-      return res.status(400).json({ message: "Missing required fields" });
+  const { SenderID, ReceiverID, Name, Detail, Status, Image } = req.body;
+
+  if (!SenderID || !ReceiverID || !Name || !Status) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
+  const statusMap: Record<string, string> = {
+    'รอไรเดอร์': 'AwaitingPickup',
+    'ไรเดอร์รับงาน': 'RiderAssigned', 
+    'กำลังจัดส่ง': 'InTransit',
+    'จัดส่งสำเร็จ': 'Delivered',
+    'AwaitingPickup': 'AwaitingPickup',
+    'RiderAssigned': 'RiderAssigned',
+    'InTransit': 'InTransit',
+    'Delivered': 'Delivered',
+  };
+  const finalStatus = statusMap[Status] || 'AwaitingPickup';
+
+  conn.getConnection((err, connection) => {
+    if (err) {
+      console.error('[order] getConnection error:', err.message);
+      return res.status(500).json({ error: err.message });
     }
-  
-    // SQL query สำหรับการสร้างคำสั่งซื้อใหม่ในตาราง deliveryorders
-    const sql = "INSERT INTO deliveryorders (SenderID, ReceiverID, Name , Detail, Status, Image) VALUES (?, ?, ?, ?, ?, ?)";
-  
-    // เรียกใช้การ query เพื่อเพิ่มข้อมูลในตาราง
-    conn.query(sql, [SenderID, ReceiverID, Name , Detail, Status, Image], (err, result) => {
+
+    connection.beginTransaction((err) => {
       if (err) {
-        // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
+        connection.release(); 
+        console.error('[order] beginTransaction error:', err.message);
         return res.status(500).json({ error: err.message });
       }
-  
-      // ส่งผลลัพธ์การสร้างคำสั่งซื้อกลับไปให้ผู้เรียก API
-      res.status(201).json({ message: "Order created successfully", orderId: result.insertId });
+
+      const orderSql = `
+        INSERT INTO deliveryorders 
+        (SenderID, ReceiverID, RiderID, Status) 
+        VALUES (?, ?, NULL, ?)
+      `;
+
+      connection.query(orderSql, [SenderID, ReceiverID, finalStatus], (err, orderResult: any) => {
+        if (err) {
+          return connection.rollback(() => {
+            connection.release(); 
+            console.error('[order] insert deliveryorders error:', err.message);
+            res.status(500).json({ error: err.message });
+          });
+        }
+
+        const orderId = orderResult.insertId;
+
+        const itemSql = `
+          INSERT INTO orderitems (OrderID, Description, ItemPicture) 
+          VALUES (?, ?, ?)
+        `;
+
+        connection.query(itemSql, [orderId, Detail || Name, Image || ''], (err) => {
+          if (err) {
+            return connection.rollback(() => {
+              connection.release(); 
+              console.error('[order] insert orderitems error:', err.message);
+              res.status(500).json({ error: err.message });
+            });
+          }
+
+          connection.commit((err) => {
+            connection.release(); 
+            
+            if (err) {
+              return connection.rollback(() => {
+                console.error('[order] commit error:', err.message);
+                res.status(500).json({ error: err.message });
+              });
+            }
+            
+            res.status(201).json({ 
+              message: "Order created successfully", 
+              orderId: orderId 
+            });
+          });
+        });
+      });
     });
   });
+});
   
   router.get("/detail/:OrderID", (req, res) => {
-    const OrderID = req.params.OrderID; // รับค่า UserID จาก URL parameter
+    const OrderID = req.params.OrderID; 
   
-    // SQL query เพื่อค้นหาข้อมูลจากตาราง deliveryorders พร้อมกับข้อมูลจาก users โดยใช้ JOIN
     const sql = `
     SELECT d.*, 
            u.Username AS CustomerName, 
@@ -48,19 +108,15 @@ router.post("/", (req, res) => {
     WHERE d.OrderID = ?
   `;
     
-    // เรียกใช้การ query ไปที่ฐานข้อมูล โดยส่ง UserID ไปใน array แทน
     conn.query(sql, [OrderID], (err, result) => {
       if (err) {
-        // ส่ง error 500 หากเกิดข้อผิดพลาดจากการ query
         return res.status(500).json({ error: err.message });
       }
     
-      // ตรวจสอบว่าพบข้อมูลหรือไม่
       if (result.length === 0) {
         return res.status(404).json({ message: "No data found" });
       }
     
-      // ส่งข้อมูลที่พบกลับไปให้ผู้เรียก API
       res.json(result);
     });
   });

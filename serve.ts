@@ -1,18 +1,28 @@
 import http from 'http';
 import express from 'express';
 import { app } from './app';
+import { conn } from './dbconn';
+import path from 'path';    
 
 
-// Middleware และ routing ของคุณที่นี่
 app.use(express.json());
+
 
 app.get('/', (req, res) => {
   res.send('Hello, world!');
 });
 
-const port = process.env.PORT || 3000;
+const port = Number(process.env.PORT) || 3000;
 const server = http.createServer(app);
 
-server.listen(port, () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on port ${port}`);
+});
+conn.getConnection((err, connection) => {
+  if (err) {
+    console.error('DB ERROR:', err);
+  } else {
+    console.log('DB CONNECTED');
+    connection.release();
+  }
 });
