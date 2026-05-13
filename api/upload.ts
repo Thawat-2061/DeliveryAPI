@@ -17,9 +17,14 @@ const upload = multer({
     limits: { fileSize: 67108864 }
 });
 
-// Helper: upload ไปที่ Supabase Storage
 const uploadToSupabase = async (bucket: string, file: Express.Multer.File) => {
-    const filename = `${Date.now()}_${Math.round(Math.random() * 100000)}${file.originalname.match(/\.[^.]+$/)?.[0] || '.png'}`;
+    const ext = file.originalname.match(/\.[^.]+$/)?.[0] || '.png';
+    
+    // ❌ ปัญหาเดิม: เอา originalname มาต่อตรงๆ อาจมีภาษาไทย/ช่องว่าง
+    // const filename = `${Date.now()}_${Math.round(Math.random() * 100000)}${ext}`;
+    
+    // ✅ แก้: ใช้แค่ timestamp + random + ext เท่านั้น (ไม่แตะ originalname เลย)
+    const filename = `${Date.now()}_${Math.round(Math.random() * 1e9)}${ext}`;
 
     const { error } = await supabase.storage
         .from(bucket)
@@ -36,7 +41,6 @@ const uploadToSupabase = async (bucket: string, file: Express.Multer.File) => {
 
     return { filename, url: data.publicUrl };
 };
-
 // POST /upload/
 router.post('/', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
