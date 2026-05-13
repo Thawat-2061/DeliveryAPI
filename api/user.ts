@@ -104,6 +104,7 @@ router.get('/show/:SenderID', async (req, res) => {
         return res.status(200).json(orders);
 
     } catch (err) {
+        console.error('SHOW ERROR:', err); // ← เพิ่มบรรทัดนี้
         res.status(500).json({ error: (err as Error).message });
     }
 });
