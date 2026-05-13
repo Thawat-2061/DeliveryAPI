@@ -54,7 +54,8 @@ router.post('/order', upload.single('file'), async (req, res) => {
     try {
         const result = await uploadToSupabase('order', req.file);
         res.status(200).json(result);
-    } catch (err) {
+        } catch (err) {
+        console.error('Upload order error:', err); // เพิ่ม log
         res.status(500).json({ error: (err as Error).message });
     }
 });
