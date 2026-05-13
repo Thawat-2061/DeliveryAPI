@@ -4,6 +4,7 @@ import { conn } from '../dbconn';
 export const router = express.Router();
 
 // Search Users
+// Search Users
 router.get('/search', async (req, res) => {
     const q = `%${(req.query.q as string) ?? ''}%`;
 
@@ -13,13 +14,13 @@ router.get('/search', async (req, res) => {
                 "UserID",
                 "Name",
                 "PhoneNumber",
-                ST_X("GPSLocation") AS "gpsLatitude",
-                ST_Y("GPSLocation") AS "gpsLongitude",
+                ST_X("GPSLocation"::geometry) AS "gpsLatitude",
+                ST_Y("GPSLocation"::geometry) AS "gpsLongitude",
                 "ProfilePicture",
                 "Address",
                 "Email"
              FROM users
-             WHERE "PhoneNumber" LIKE $1 OR "Name" LIKE $2
+             WHERE "PhoneNumber" ILIKE $1 OR "Name" ILIKE $2
              LIMIT 30`,
             [q, q]
         );
@@ -41,7 +42,7 @@ router.get('/search', async (req, res) => {
         res.status(500).json({ error: (err as Error).message });
     }
 });
-
+// Show Orders by SenderID
 // Show Orders by SenderID
 router.get('/show/:SenderID', async (req, res) => {
     const { SenderID } = req.params;
@@ -60,11 +61,11 @@ router.get('/show/:SenderID', async (req, res) => {
                 STRING_AGG(oi."ItemPicture",  ' | ') AS "Image",
                 receiver."Name"           AS "CustomerName",
                 receiver."PhoneNumber"    AS "CustomerPhone",
-                ST_Y(receiver."GPSLocation") || ',' || ST_X(receiver."GPSLocation") AS "CustomerGPS",
+                ST_Y(receiver."GPSLocation"::geometry) || ',' || ST_X(receiver."GPSLocation"::geometry) AS "CustomerGPS",
                 receiver."ProfilePicture" AS "CustomerImage",
                 sender."Name"             AS "SenderName",
                 sender."PhoneNumber"      AS "SenderPhone",
-                ST_Y(sender."GPSLocation") || ',' || ST_X(sender."GPSLocation") AS "SenderGPS",
+                ST_Y(sender."GPSLocation"::geometry) || ',' || ST_X(sender."GPSLocation"::geometry) AS "SenderGPS",
                 sender."ProfilePicture"   AS "SenderImage"
              FROM deliveryorders d
              JOIN users receiver ON d."ReceiverID" = receiver."UserID"
@@ -81,23 +82,23 @@ router.get('/show/:SenderID', async (req, res) => {
         if (result.rows.length === 0) return res.status(200).json([]);
 
         const orders = result.rows.map((d: any) => ({
-            orderId:               d.OrderID,
-            senderId:              d.SenderID,
-            receiverId:            d.ReceiverID,
-            riderId:               d.RiderID,
-            name:                  d.Detail ?? '',
-            detail:                d.Detail ?? '',
-            status:                d.Status ?? '',
-            customerName:          d.CustomerName  ?? '',
-            customerPhone:         d.CustomerPhone ?? '',
-            customerLocation:      d.CustomerGPS   ?? '0.0,0.0',
-            senderLocation:        d.SenderGPS     ?? '0.0,0.0',
-            profilePicture:        d.Image?.split('|')[0]?.trim() ?? '',
-            images:                d.Image ? d.Image.split(' | ') : [],
+            orderId:                d.OrderID,
+            senderId:               d.SenderID,
+            receiverId:             d.ReceiverID,
+            riderId:                d.RiderID,
+            name:                   d.Detail ?? '',
+            detail:                 d.Detail ?? '',
+            status:                 d.Status ?? '',
+            customerName:           d.CustomerName  ?? '',
+            customerPhone:          d.CustomerPhone ?? '',
+            customerLocation:       d.CustomerGPS   ?? '0.0,0.0',
+            senderLocation:         d.SenderGPS     ?? '0.0,0.0',
+            profilePicture:         d.Image?.split('|')[0]?.trim() ?? '',
+            images:                 d.Image ? d.Image.split(' | ') : [],
             customerProfilePicture: d.CustomerImage ?? '',
-            senderProfilePicture:  d.SenderImage   ?? '',
-            createdAt:             d.CreatedAt ?? '',
-            updatedAt:             d.UpdatedAt ?? '',
+            senderProfilePicture:   d.SenderImage   ?? '',
+            createdAt:              d.CreatedAt ?? '',
+            updatedAt:              d.UpdatedAt ?? '',
         }));
 
         return res.status(200).json(orders);
@@ -125,11 +126,11 @@ router.get('/showMe/:UserID', async (req, res) => {
                 STRING_AGG(oi."ItemPicture",  ' | ') AS "Image",
                 sender."Name"             AS "SenderName",
                 sender."PhoneNumber"      AS "SenderPhone",
-                ST_Y(sender."GPSLocation") || ',' || ST_X(sender."GPSLocation") AS "SenderGPS",
+                ST_Y(sender."GPSLocation"::geometry) || ',' || ST_X(sender."GPSLocation"::geometry) AS "SenderGPS",
                 sender."ProfilePicture"   AS "SenderImage",
                 receiver."Name"           AS "ReceiverName",
                 receiver."PhoneNumber"    AS "ReceiverPhone",
-                ST_Y(receiver."GPSLocation") || ',' || ST_X(receiver."GPSLocation") AS "ReceiverGPS",
+                ST_Y(receiver."GPSLocation"::geometry) || ',' || ST_X(receiver."GPSLocation"::geometry) AS "ReceiverGPS",
                 receiver."ProfilePicture" AS "ReceiverImage"
              FROM deliveryorders d
              JOIN users sender   ON d."SenderID"   = sender."UserID"
@@ -146,13 +147,13 @@ router.get('/showMe/:UserID', async (req, res) => {
         if (result.rows.length === 0) return res.status(200).json([]);
 
         const orders = result.rows.map((d: any) => ({
-            orderId:                d.OrderID  ? Number(d.OrderID)   : 0,
-            senderId:               d.SenderID ? Number(d.SenderID)  : 0,
+            orderId:                d.OrderID   ? Number(d.OrderID)    : 0,
+            senderId:               d.SenderID  ? Number(d.SenderID)   : 0,
             receiverId:             d.ReceiverID ? Number(d.ReceiverID) : 0,
-            riderId:                d.RiderID  ? Number(d.RiderID)   : null,
-            name:                   d.Detail?.toString() ?? '',
-            detail:                 d.Detail?.toString() ?? '',
-            status:                 d.Status?.toString() ?? '',
+            riderId:                d.RiderID   ? Number(d.RiderID)    : null,
+            name:                   d.Detail?.toString()       ?? '',
+            detail:                 d.Detail?.toString()       ?? '',
+            status:                 d.Status?.toString()       ?? '',
             senderName:             d.SenderName?.toString()   ?? '',
             senderPhone:            d.SenderPhone?.toString()  ?? '',
             senderLocation:         d.SenderGPS?.toString()    ?? '0.0,0.0',
