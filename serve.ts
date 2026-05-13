@@ -2,11 +2,8 @@ import http from 'http';
 import express from 'express';
 import { app } from './app';
 import { conn } from './dbconn';
-import path from 'path';    
-
 
 app.use(express.json());
-
 
 app.get('/', (req, res) => {
   res.send('Hello, world!');
@@ -18,11 +15,13 @@ const server = http.createServer(app);
 server.listen(port, '0.0.0.0', () => {
   console.log(`Server is running on port ${port}`);
 });
-conn.getConnection((err, connection) => {
+
+// ทดสอบ DB connection
+conn.connect((err, client, release) => {
   if (err) {
     console.error('DB ERROR:', err);
   } else {
     console.log('DB CONNECTED');
-    connection.release();
+    release();
   }
 });

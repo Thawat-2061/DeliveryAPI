@@ -1,107 +1,111 @@
 import express from 'express';
-import mysql from 'mysql';
-import { conn } from '../dbconn'; 
+import { conn } from '../dbconn';
 import bcrypt from 'bcryptjs';
 
 export const router = express.Router();
 
-router.post("/user", (req, res) => {
-  const { input } = req.body;
+const saltRounds = 10;
 
-  if (!input) {
-    return res.status(400).json({ error: "Input is required" });
-  }
-
-  const sql = "SELECT * FROM users WHERE Email = ? OR Name = ? OR PhoneNumber = ?";
-
-  conn.query(sql, [input, input, input], (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-
-    if (result.length === 0) {
-      return res.status(404).json({ message: "No user found" });
-    }
-
-    res.json(result);
-  });
-});
-
-  router.post("/rider", (req, res) => {
+// Search User
+router.post("/user", async (req, res) => {
     const { input } = req.body;
-  
+
     if (!input) {
-      return res.status(400).json({ error: "Input is required" });
+        return res.status(400).json({ error: "Input is required" });
     }
-  
-    const sql = "SELECT * FROM riders WHERE Email = ? OR Name = ? OR PhoneNumber = ?";
-  
-    conn.query(sql, [input, input , input], (err, result) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-  
-      if (result.length === 0) {
-        return res.status(404).json({ message: "No rider found" });
-      }
-  
-      res.json(result);
-    });
-  });
-  const saltRounds = 10;
 
+    try {
+        const result = await conn.query(
+            `SELECT * FROM users WHERE "Email" = $1 OR "Name" = $2 OR "PhoneNumber" = $3`,
+            [input, input, input]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "No user found" });
+        }
+
+        res.json(result.rows);
+
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+// Search Rider
+router.post("/rider", async (req, res) => {
+    const { input } = req.body;
+
+    if (!input) {
+        return res.status(400).json({ error: "Input is required" });
+    }
+
+    try {
+        const result = await conn.query(
+            `SELECT * FROM riders WHERE "Email" = $1 OR "Name" = $2 OR "PhoneNumber" = $3`,
+            [input, input, input]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "No rider found" });
+        }
+
+        res.json(result.rows);
+
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
+});
+
+// Update User Password
 router.put("/passUser", async (req, res) => {
-  const { UserID, Password } = req.body;
+    const { UserID, Password } = req.body;
 
-  try {
     if (!UserID || !Password) {
-      return res.status(400).json({ error: "UserID and Password are required" });
+        return res.status(400).json({ error: "UserID and Password are required" });
     }
 
-    const hashedPassword = await bcrypt.hash(Password, saltRounds);
+    try {
+        const hashedPassword = await bcrypt.hash(Password, saltRounds);
 
-    const sql = "UPDATE users SET Password = ? WHERE UserID = ?";
+        const result = await conn.query(
+            `UPDATE users SET "Password" = $1 WHERE "UserID" = $2`,
+            [hashedPassword, UserID]
+        );
 
-    conn.query(sql, [hashedPassword, UserID], (err, result) => {
-      if (err) {
-        return res.status(500).json({ error: (err as Error).message });
-      }
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: "No user found with the provided UserID" });
+        }
 
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "No user found with the provided UserID" });
-      }
+        res.json({ message: "Password updated successfully" });
 
-      res.json({ message: "Password updated successfully" });
-    });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
 });
+
+// Update Rider Password
 router.put("/passRider", async (req, res) => {
-  const { RiderID, Password } = req.body;
+    const { RiderID, Password } = req.body;
 
-  try {
     if (!RiderID || !Password) {
-      return res.status(400).json({ error: "UserID and Password are required" });
+        return res.status(400).json({ error: "RiderID and Password are required" });
     }
 
-    const hashedPassword = await bcrypt.hash(Password, saltRounds);
+    try {
+        const hashedPassword = await bcrypt.hash(Password, saltRounds);
 
-    const sql = "UPDATE riders SET Password = ? WHERE RiderID = ?";
+        const result = await conn.query(
+            `UPDATE riders SET "Password" = $1 WHERE "RiderID" = $2`,
+            [hashedPassword, RiderID]
+        );
 
-    conn.query(sql, [hashedPassword, RiderID], (err, result) => {
-      if (err) {
-        return res.status(500).json({ error: (err as Error).message });
-      }
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: "No rider found with the provided RiderID" });
+        }
 
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: "No user found with the provided UserID" });
-      }
+        res.json({ message: "Password updated successfully" });
 
-      res.json({ message: "Password updated successfully" });
-    });
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
-  }
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
 });
-  

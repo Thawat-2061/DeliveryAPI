@@ -1,5 +1,4 @@
 import express from 'express';
-import mysql from 'mysql';
 import { conn } from '../dbconn';
 import bcrypt from 'bcryptjs';
 
@@ -7,9 +6,8 @@ export const router = express.Router();
 
 const saltRounds = 10;
 
+// Register User
 router.post('/user', async (req, res) => {
-    console.log(' HIT REGISTER USER');
-console.log('BODY:', req.body);
     const User = req.body;
 
     if (!User.Username || !User.Email || !User.Password || !User.Phone || !User.Address || !User.GPS_Latitude || !User.GPS_Longitude) {
@@ -17,132 +15,117 @@ console.log('BODY:', req.body);
     }
 
     if (isNaN(User.GPS_Latitude) || isNaN(User.GPS_Longitude)) {
-        return res.status(400).send({ message: 'พิกัด GPS ไม่ถูกต้อง' });
+        return res.status(400).json({ message: 'พิกัด GPS ไม่ถูกต้อง' });
     }
 
     try {
         const hashedPassword = await bcrypt.hash(User.Password, saltRounds);
 
-        const gpsLocation = `${User.GPS_Latitude},${User.GPS_Longitude}`;
+        // เช็คซ้ำ
+        const checkResult = await conn.query(
+            `SELECT * FROM users WHERE "Name" = $1 OR "Email" = $2 OR "PhoneNumber" = $3`,
+            [User.Username, User.Email, User.Phone]
+        );
 
-        const checkQuery = `
-            SELECT * FROM users 
-            WHERE Name = ? OR Email = ? OR PhoneNumber = ?
-        `;
+        if (checkResult.rows.length > 0) {
+            return res.status(409).json({ message: 'ข้อมูลซ้ำ' });
+        }
 
-        conn.query(checkQuery, [User.Username, User.Email, User.Phone], (err, rows) => {
-            if (err) {
-                return res.status(500).send({ message: 'เกิดข้อผิดพลาด', error: err });
-            }
+        // Insert
+        const result = await conn.query(
+            `INSERT INTO users ("PhoneNumber", "Password", "Name", "Email", "ProfilePicture", "Address", "GPSLocation")
+             VALUES ($1, $2, $3, $4, $5, $6, POINT($7, $8))
+             RETURNING "UserID"`,
+            [User.Phone, hashedPassword, User.Username, User.Email, User.Image, User.Address, User.GPS_Latitude, User.GPS_Longitude]
+        );
 
-            if (rows.length > 0) {
-                return res.status(409).send({ message: 'ข้อมูลซ้ำ' });
-            }
-
-            const query = `
-            INSERT INTO users 
-            (PhoneNumber, Password, Name, Email, ProfilePicture, Address, GPSLocation)
-            VALUES (?, ?, ?, ?, ?, ?, POINT(?, ?))
-            `;
-
-            conn.query(query, [
-                User.Phone,         
-                hashedPassword,     
-                User.Username,       
-                User.Email,         
-                User.Image,          
-                User.Address,        
-                User.GPS_Latitude,   
-                User.GPS_Longitude    
-            ], (err, result) => {
-            if (err) {
-                console.error(' INSERT ERROR:', err);
-                return res.status(500).send(err);
-            }
-
-            res.status(201).send({
-                message: 'สมัครสำเร็จ',
-                userId: result.insertId
-            });
-            });
+        res.status(201).json({
+            message: 'สมัครสำเร็จ',
+            userId: result.rows[0].UserID
         });
 
     } catch (error) {
-        res.status(500).send({ message: 'error', error });
+        console.error('Register user error:', error);
+        res.status(500).json({ message: 'error', error });
     }
 });
 
-
+// Register Rider
 router.post('/rider', async (req, res) => {
-    let Rider = req.body;
+    const Rider = req.body;
 
     if (!Rider.Username || !Rider.Email || !Rider.Password || !Rider.Phone || !Rider.VehicleRegistration) {
-        return res.status(400).send({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
+        return res.status(400).json({ message: 'กรุณากรอกข้อมูลให้ครบถ้วน' });
     }
 
     try {
         const hashedPassword = await bcrypt.hash(Rider.Password, saltRounds);
-        const checkQuery = `SELECT * FROM riders WHERE Name = ? OR Email = ? OR PhoneNumber = ? OR VehicleRegistration = ?`;
-        conn.query(checkQuery, [Rider.Username, Rider.Email,Rider.Phone,Rider.VehicleRegistration], (err, rows) => {
-            if (err) {
-                console.error('Error checking for existing user:', err);
-                return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการตรวจสอบข้อมูล', error: err });
-            }
-            if (rows.length > 0) {
-                return res.status(409).send({ message: 'ชื่อผู้ใช้หรืออีเมลนี้มีอยู่แล้ว' });
-            }
 
-        const query = `
-            INSERT INTO riders (PhoneNumber, Password, Name, Email, ProfilePicture, VehicleRegistration)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `;
+        // เช็คซ้ำ
+        const checkResult = await conn.query(
+            `SELECT * FROM riders WHERE "Name" = $1 OR "Email" = $2 OR "PhoneNumber" = $3 OR "VehicleRegistration" = $4`,
+            [Rider.Username, Rider.Email, Rider.Phone, Rider.VehicleRegistration]
+        );
 
-        conn.query(query, [Rider.Phone, hashedPassword, Rider.Username, Rider.Email, Rider.Image, Rider.VehicleRegistration], (err, result) => {
-            if (err) {
-                return res.status(500).send({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล Rider', error: err });
-            }
-            res.status(201).send({ message: 'สมัคร Rider สำเร็จ' });
-        });
-    });
+        if (checkResult.rows.length > 0) {
+            return res.status(409).json({ message: 'ชื่อผู้ใช้หรืออีเมลนี้มีอยู่แล้ว' });
+        }
+
+        // Insert
+        await conn.query(
+            `INSERT INTO riders ("PhoneNumber", "Password", "Name", "Email", "ProfilePicture", "VehicleRegistration")
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [Rider.Phone, hashedPassword, Rider.Username, Rider.Email, Rider.Image, Rider.VehicleRegistration]
+        );
+
+        res.status(201).json({ message: 'สมัคร Rider สำเร็จ' });
+
     } catch (error) {
-        res.status(500).send({ message: 'เกิดข้อผิดพลาด', error });
+        console.error('Register rider error:', error);
+        res.status(500).json({ message: 'เกิดข้อผิดพลาด', error });
     }
 });
 
-router.delete('/userDE', (req, res) => {
-    const {userId} = req.body;
+// Delete User
+router.delete('/userDE', async (req, res) => {
+    const { userId } = req.body;
 
-    const deleteUserQuery = 'DELETE FROM users WHERE UserID = ?';
+    try {
+        const result = await conn.query(
+            `DELETE FROM users WHERE "UserID" = $1`,
+            [userId]
+        );
 
-    conn.query(deleteUserQuery, [userId], (err, result) => {
-        if (err) {
-            console.error('Error deleting user:', err);
-            return res.status(500).json({ message: 'Failed to delete user' });
-        }
-
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ message: 'User not found' });
         }
 
         res.status(200).json({ message: 'User deleted successfully' });
-    });
+
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({ message: 'Failed to delete user' });
+    }
 });
 
-router.delete('/riderDE', (req, res) => {
-    const {riderId} = req.body;
+// Delete Rider
+router.delete('/riderDE', async (req, res) => {
+    const { riderId } = req.body;
 
-    const deleteUserQuery = 'DELETE FROM riders WHERE RiderID = ?';
+    try {
+        const result = await conn.query(
+            `DELETE FROM riders WHERE "RiderID" = $1`,
+            [riderId]
+        );
 
-    conn.query(deleteUserQuery, [riderId], (err, result) => {
-        if (err) {
-            console.error('Error deleting rider:', err);
-            return res.status(500).json({ message: 'Failed to delete rider' });
-        }
-
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Rider not found' });
         }
 
         res.status(200).json({ message: 'Rider deleted successfully' });
-    });
+
+    } catch (error) {
+        console.error('Delete rider error:', error);
+        res.status(500).json({ message: 'Failed to delete rider' });
+    }
 });

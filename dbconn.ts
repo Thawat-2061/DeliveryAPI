@@ -1,20 +1,6 @@
-import mysql from "mysql";
+import { Pool } from "pg";
 
-export const conn = mysql.createPool({
-
-
-  connectionLimit: 10,
-  host: "localhost",
-  user: "kan",
-  password: "kas333",
-  database: "deliverydb",
-
-  // connectionLimit: 10,
-  // host: "sql12.freemysqlhosting.net",
-  // user: "sql12731231",
-  // password: "T6FHLLJQNh",
-  // database: "sql12731231",
-
+export const conn = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
-
-

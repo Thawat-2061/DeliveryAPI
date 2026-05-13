@@ -1,122 +1,92 @@
 import express from 'express';
-import mysql from 'mysql';
 import { conn } from '../dbconn';
-import bcrypt from 'bcryptjs';
 
 export const router = express.Router();
 
-router.post("/", (req, res) => {
-  const { SenderID, ReceiverID, Name, Detail, Status, Image } = req.body;
-
-  if (!SenderID || !ReceiverID || !Name || !Status) {
-    return res.status(400).json({ message: "Missing required fields" });
-  }
-
-  const statusMap: Record<string, string> = {
-    'รอไรเดอร์': 'AwaitingPickup',
-    'ไรเดอร์รับงาน': 'RiderAssigned', 
-    'กำลังจัดส่ง': 'InTransit',
+const statusMap: Record<string, string> = {
+    'รอไรเดอร์':    'AwaitingPickup',
+    'ไรเดอร์รับงาน': 'RiderAssigned',
+    'กำลังจัดส่ง':  'InTransit',
     'จัดส่งสำเร็จ': 'Delivered',
     'AwaitingPickup': 'AwaitingPickup',
-    'RiderAssigned': 'RiderAssigned',
-    'InTransit': 'InTransit',
-    'Delivered': 'Delivered',
-  };
-  const finalStatus = statusMap[Status] || 'AwaitingPickup';
+    'RiderAssigned':  'RiderAssigned',
+    'InTransit':      'InTransit',
+    'Delivered':      'Delivered',
+};
 
-  conn.getConnection((err, connection) => {
-    if (err) {
-      console.error('[order] getConnection error:', err.message);
-      return res.status(500).json({ error: err.message });
+// Create Order
+router.post('/', async (req, res) => {
+    const { SenderID, ReceiverID, Name, Detail, Status, Image } = req.body;
+
+    if (!SenderID || !ReceiverID || !Name || !Status) {
+        return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    connection.beginTransaction((err) => {
-      if (err) {
-        connection.release(); 
-        console.error('[order] beginTransaction error:', err.message);
-        return res.status(500).json({ error: err.message });
-      }
+    const finalStatus = statusMap[Status] || 'AwaitingPickup';
+    const client = await conn.connect();
 
-      const orderSql = `
-        INSERT INTO deliveryorders 
-        (SenderID, ReceiverID, RiderID, Status) 
-        VALUES (?, ?, NULL, ?)
-      `;
+    try {
+        await client.query('BEGIN');
 
-      connection.query(orderSql, [SenderID, ReceiverID, finalStatus], (err, orderResult: any) => {
-        if (err) {
-          return connection.rollback(() => {
-            connection.release(); 
-            console.error('[order] insert deliveryorders error:', err.message);
-            res.status(500).json({ error: err.message });
-          });
+        const orderResult = await client.query(
+            `INSERT INTO deliveryorders ("SenderID", "ReceiverID", "RiderID", "Status")
+             VALUES ($1, $2, NULL, $3)
+             RETURNING "OrderID"`,
+            [SenderID, ReceiverID, finalStatus]
+        );
+
+        const orderId = orderResult.rows[0].OrderID;
+
+        await client.query(
+            `INSERT INTO orderitems ("OrderID", "Description", "ItemPicture")
+             VALUES ($1, $2, $3)`,
+            [orderId, Detail || Name, Image || '']
+        );
+
+        await client.query('COMMIT');
+
+        res.status(201).json({ message: 'Order created successfully', orderId });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('[order] error:', err);
+        res.status(500).json({ error: (err as Error).message });
+
+    } finally {
+        client.release();
+    }
+});
+
+// Get Order Detail
+router.get('/detail/:OrderID', async (req, res) => {
+    const { OrderID } = req.params;
+
+    try {
+        const result = await conn.query(
+            `SELECT
+                d.*,
+                u."Name"        AS "CustomerName",
+                u."PhoneNumber" AS "CustomerPhone",
+                ST_X(u."GPSLocation") AS "CustomerLat",
+                ST_Y(u."GPSLocation") AS "CustomerLong",
+                sender."Name"        AS "SenderName",
+                sender."PhoneNumber" AS "SenderPhone",
+                ST_X(sender."GPSLocation") AS "SenderLat",
+                ST_Y(sender."GPSLocation") AS "SenderLong"
+             FROM deliveryorders d
+             JOIN users u      ON d."ReceiverID" = u."UserID"
+             JOIN users sender ON d."SenderID"   = sender."UserID"
+             WHERE d."OrderID" = $1`,
+            [OrderID]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'No data found' });
         }
 
-        const orderId = orderResult.insertId;
+        res.json(result.rows);
 
-        const itemSql = `
-          INSERT INTO orderitems (OrderID, Description, ItemPicture) 
-          VALUES (?, ?, ?)
-        `;
-
-        connection.query(itemSql, [orderId, Detail || Name, Image || ''], (err) => {
-          if (err) {
-            return connection.rollback(() => {
-              connection.release(); 
-              console.error('[order] insert orderitems error:', err.message);
-              res.status(500).json({ error: err.message });
-            });
-          }
-
-          connection.commit((err) => {
-            connection.release(); 
-            
-            if (err) {
-              return connection.rollback(() => {
-                console.error('[order] commit error:', err.message);
-                res.status(500).json({ error: err.message });
-              });
-            }
-            
-            res.status(201).json({ 
-              message: "Order created successfully", 
-              orderId: orderId 
-            });
-          });
-        });
-      });
-    });
-  });
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
 });
-  
-  router.get("/detail/:OrderID", (req, res) => {
-    const OrderID = req.params.OrderID; 
-  
-    const sql = `
-    SELECT d.*, 
-           u.Username AS CustomerName, 
-           u.Phone AS CustomerPhone, 
-           u.GPS_Latitude AS CustomerLat, 
-           u.GPS_Longitude AS CustomerLong,
-           sender.Username AS SenderName,
-           sender.Phone AS SenderPhone,
-           sender.GPS_Latitude AS SenderLat, 
-           sender.GPS_Longitude AS SenderLong
-    FROM deliveryorders d
-    JOIN users u ON d.ReceiverID = u.UserID
-    JOIN users sender ON d.SenderID = sender.UserID
-    WHERE d.OrderID = ?
-  `;
-    
-    conn.query(sql, [OrderID], (err, result) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-    
-      if (result.length === 0) {
-        return res.status(404).json({ message: "No data found" });
-      }
-    
-      res.json(result);
-    });
-  });
