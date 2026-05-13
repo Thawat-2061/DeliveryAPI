@@ -28,6 +28,8 @@ const uploadToSupabase = async (bucket: string, file: Express.Multer.File) => {
     console.log('buffer length:', file.buffer?.length);
     console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'MISSING');
     console.log('SUPABASE_SERVICE_KEY:', process.env.SUPABASE_SERVICE_KEY ? 'SET' : 'MISSING');
+    console.log('SUPABASE_URL value:', process.env.SUPABASE_URL);
+    console.log('SUPABASE_SERVICE_KEY value:', process.env.SUPABASE_SERVICE_KEY);
 
     const { error } = await supabase.storage
         .from(bucket)
