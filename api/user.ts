@@ -43,10 +43,8 @@ router.get('/search', async (req, res) => {
     }
 });
 // Show Orders by SenderID
-// Show Orders by SenderID
 router.get('/show/:SenderID', async (req, res) => {
     const { SenderID } = req.params;
-
     try {
         const result = await conn.query(
             `SELECT
@@ -72,9 +70,11 @@ router.get('/show/:SenderID', async (req, res) => {
              JOIN users sender   ON d."SenderID"   = sender."UserID"
              LEFT JOIN orderitems oi ON d."OrderID" = oi."OrderID"
              WHERE d."SenderID" = $1
-             GROUP BY d."OrderID", receiver."Name", receiver."PhoneNumber", receiver."GPSLocation",
+             GROUP BY d."OrderID", receiver."Name", receiver."PhoneNumber",
+                      ST_AsText(receiver."GPSLocation"::geometry),
                       receiver."ProfilePicture", sender."Name", sender."PhoneNumber",
-                      sender."GPSLocation", sender."ProfilePicture"
+                      ST_AsText(sender."GPSLocation"::geometry),
+                      sender."ProfilePicture"
              ORDER BY d."OrderID" DESC`,
             [SenderID]
         );
@@ -102,9 +102,8 @@ router.get('/show/:SenderID', async (req, res) => {
         }));
 
         return res.status(200).json(orders);
-
     } catch (err) {
-        console.error('SHOW ERROR:', err); // ← เพิ่มบรรทัดนี้
+        console.error('SHOW ERROR:', err);
         res.status(500).json({ error: (err as Error).message });
     }
 });
@@ -112,7 +111,6 @@ router.get('/show/:SenderID', async (req, res) => {
 // Show Orders by ReceiverID
 router.get('/showMe/:UserID', async (req, res) => {
     const { UserID } = req.params;
-
     try {
         const result = await conn.query(
             `SELECT
@@ -138,9 +136,11 @@ router.get('/showMe/:UserID', async (req, res) => {
              JOIN users receiver ON d."ReceiverID" = receiver."UserID"
              LEFT JOIN orderitems oi ON d."OrderID" = oi."OrderID"
              WHERE d."ReceiverID" = $1
-             GROUP BY d."OrderID", sender."Name", sender."PhoneNumber", sender."GPSLocation",
+             GROUP BY d."OrderID", sender."Name", sender."PhoneNumber",
+                      ST_AsText(sender."GPSLocation"::geometry),
                       sender."ProfilePicture", receiver."Name", receiver."PhoneNumber",
-                      receiver."GPSLocation", receiver."ProfilePicture"
+                      ST_AsText(receiver."GPSLocation"::geometry),
+                      receiver."ProfilePicture"
              ORDER BY d."OrderID" DESC`,
             [UserID]
         );
@@ -170,8 +170,8 @@ router.get('/showMe/:UserID', async (req, res) => {
         }));
 
         return res.status(200).json(orders);
-
     } catch (err) {
+        console.error('SHOWME ERROR:', err);
         res.status(500).json({ error: (err as Error).message });
     }
 });
