@@ -15,15 +15,18 @@ export const app = express();
 const cors = require('cors');
 
 app.use(cors());
-app.use(bodyParser.json());
 
+// ✅ วาง /upload ก่อน bodyParser เสมอ
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/upload", upload);
+
+// ✅ bodyParser วางหลัง upload route
+app.use(bodyParser.json());
 
 app.use("/login", login);
 app.use("/register", register);
 app.use("/profile", profile);
 app.use("/user", user);
-app.use("/upload", upload);
 app.use("/order", order);
 app.use("/rider", rider);
 app.use("/status", status);
