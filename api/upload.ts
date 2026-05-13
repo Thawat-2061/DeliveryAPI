@@ -19,12 +19,15 @@ const upload = multer({
 
 const uploadToSupabase = async (bucket: string, file: Express.Multer.File) => {
     const ext = file.originalname.match(/\.[^.]+$/)?.[0] || '.png';
-    
-    // ❌ ปัญหาเดิม: เอา originalname มาต่อตรงๆ อาจมีภาษาไทย/ช่องว่าง
-    // const filename = `${Date.now()}_${Math.round(Math.random() * 100000)}${ext}`;
-    
-    // ✅ แก้: ใช้แค่ timestamp + random + ext เท่านั้น (ไม่แตะ originalname เลย)
     const filename = `${Date.now()}_${Math.round(Math.random() * 1e9)}${ext}`;
+
+    console.log('=== UPLOAD DEBUG ===');
+    console.log('bucket:', bucket);
+    console.log('filename:', filename);
+    console.log('mimetype:', file.mimetype);
+    console.log('buffer length:', file.buffer?.length);
+    console.log('SUPABASE_URL:', process.env.SUPABASE_URL ? 'SET' : 'MISSING');
+    console.log('SUPABASE_SERVICE_KEY:', process.env.SUPABASE_SERVICE_KEY ? 'SET' : 'MISSING');
 
     const { error } = await supabase.storage
         .from(bucket)
@@ -33,7 +36,10 @@ const uploadToSupabase = async (bucket: string, file: Express.Multer.File) => {
             upsert: false
         });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+        console.log('Supabase error:', JSON.stringify(error, null, 2)); // ดู error เต็มๆ
+        throw new Error(error.message);
+    }
 
     const { data } = supabase.storage
         .from(bucket)
