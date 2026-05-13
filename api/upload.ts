@@ -1,63 +1,84 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import { createClient } from '@supabase/supabase-js';
 import { conn } from '../dbconn';
 import { UploadPostRequest } from '../model/UploadModel';
 
 export const router = express.Router();
 
-const makeDir = (dir: string) => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-};
-makeDir('uploads/images');
-makeDir('uploads/order');
-makeDir('uploads/statusOrder');
+const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+);
 
-const makeStorage = (folder: string) =>
-    multer.diskStorage({
-        destination: (_req, _file, cb) => cb(null, `uploads/${folder}`),
-        filename: (_req, file, cb) => {
-            const unique = Math.round(Math.random() * 100000);
-            cb(null, unique + path.extname(file.originalname || '.png'));
-        },
-    });
+// ใช้ memoryStorage แทน diskStorage เพราะ Vercel ไม่มี disk
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 67108864 }
+});
 
-const uploaders = {
-    images:      multer({ storage: makeStorage('images'),      limits: { fileSize: 67108864 } }),
-    order:       multer({ storage: makeStorage('order'),       limits: { fileSize: 67108864 } }),
-    statusOrder: multer({ storage: makeStorage('statusOrder'), limits: { fileSize: 67108864 } }),
+// Helper: upload ไปที่ Supabase Storage
+const uploadToSupabase = async (bucket: string, file: Express.Multer.File) => {
+    const filename = `${Date.now()}_${Math.round(Math.random() * 100000)}${file.originalname.match(/\.[^.]+$/)?.[0] || '.png'}`;
+
+    const { error } = await supabase.storage
+        .from(bucket)
+        .upload(filename, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false
+        });
+
+    if (error) throw new Error(error.message);
+
+    const { data } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filename);
+
+    return { filename, url: data.publicUrl };
 };
 
 // POST /upload/
-router.post('/', uploaders.images.single('file'), (req, res) => {
+router.post('/', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    res.status(200).json({ filename: req.file.filename, url: `uploads/images/${req.file.filename}` });
+    try {
+        const result = await uploadToSupabase('images', req.file);
+        res.status(200).json(result);
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
 });
 
 // POST /upload/order
-router.post('/order', uploaders.order.single('file'), (req, res) => {
+router.post('/order', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    res.status(200).json({ filename: req.file.filename, url: `uploads/order/${req.file.filename}` });
+    try {
+        const result = await uploadToSupabase('order', req.file);
+        res.status(200).json(result);
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
 });
 
 // POST /upload/upstatus
-router.post('/upstatus', uploaders.statusOrder.single('file'), (req, res) => {
+router.post('/upstatus', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
-    res.status(200).json({ filename: req.file.filename, url: `uploads/statusOrder/${req.file.filename}` });
+    try {
+        const result = await uploadToSupabase('statusOrder', req.file);
+        res.status(200).json(result);
+    } catch (err) {
+        res.status(500).json({ error: (err as Error).message });
+    }
 });
 
 // Update User Image
 router.post('/update', async (req, res) => {
     const { Image, UserID }: UploadPostRequest = req.body;
-
     try {
         const result = await conn.query(
             `UPDATE users SET "ProfilePicture" = $1 WHERE "UserID" = $2`,
             [Image, UserID]
         );
         res.status(200).json({ affected_rows: result.rowCount });
-
     } catch (err) {
         res.status(500).json({ error: 'Failed to update data' });
     }
@@ -66,14 +87,12 @@ router.post('/update', async (req, res) => {
 // Update Rider Image
 router.post('/updateRider', async (req, res) => {
     const { RiderID, Image } = req.body;
-
     try {
         const result = await conn.query(
             `UPDATE riders SET "ProfilePicture" = $1 WHERE "RiderID" = $2`,
             [Image, RiderID]
         );
         res.status(200).json({ affected_rows: result.rowCount });
-
     } catch (err) {
         res.status(500).json({ error: 'Failed to update data' });
     }
@@ -82,14 +101,12 @@ router.post('/updateRider', async (req, res) => {
 // Update Order Image & Status
 router.post('/imageUP', async (req, res) => {
     const { OrderID, Image, Status } = req.body;
-
     try {
         const result = await conn.query(
             `UPDATE deliveryorders SET "Image" = $1, "Status" = $2 WHERE "OrderID" = $3`,
             [Image, Status, OrderID]
         );
         res.status(200).json({ affected_rows: result.rowCount });
-
     } catch (err) {
         res.status(500).json({ error: 'Failed to update data' });
     }
