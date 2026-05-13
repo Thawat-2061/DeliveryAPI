@@ -70,11 +70,7 @@ router.get('/show/:SenderID', async (req, res) => {
              JOIN users sender   ON d."SenderID"   = sender."UserID"
              LEFT JOIN orderitems oi ON d."OrderID" = oi."OrderID"
              WHERE d."SenderID" = $1
-             GROUP BY d."OrderID", receiver."Name", receiver."PhoneNumber",
-                      ST_AsText(receiver."GPSLocation"::geometry),
-                      receiver."ProfilePicture", sender."Name", sender."PhoneNumber",
-                      ST_AsText(sender."GPSLocation"::geometry),
-                      sender."ProfilePicture"
+             GROUP BY d."OrderID", receiver."UserID", sender."UserID"
              ORDER BY d."OrderID" DESC`,
             [SenderID]
         );
@@ -136,11 +132,7 @@ router.get('/showMe/:UserID', async (req, res) => {
              JOIN users receiver ON d."ReceiverID" = receiver."UserID"
              LEFT JOIN orderitems oi ON d."OrderID" = oi."OrderID"
              WHERE d."ReceiverID" = $1
-             GROUP BY d."OrderID", sender."Name", sender."PhoneNumber",
-                      ST_AsText(sender."GPSLocation"::geometry),
-                      sender."ProfilePicture", receiver."Name", receiver."PhoneNumber",
-                      ST_AsText(receiver."GPSLocation"::geometry),
-                      receiver."ProfilePicture"
+             GROUP BY d."OrderID", sender."UserID", receiver."UserID"
              ORDER BY d."OrderID" DESC`,
             [UserID]
         );
@@ -175,7 +167,6 @@ router.get('/showMe/:UserID', async (req, res) => {
         res.status(500).json({ error: (err as Error).message });
     }
 });
-
 // Get All Users except userId
 router.get('/:userId', async (req, res) => {
     const { userId } = req.params;
